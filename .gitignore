@@ -1,6 +1,10 @@
-CAAML/*
-ICSI/*
-.vscode/*
-CAAML/
-ICSI/
-.vscode/
+CAAML
+ICSI
+TIMIT
+DART
+train_tisv
+test_tisv
+.vscode
+speech_id_checkpoint
+ffmpeg-static
+*.model
