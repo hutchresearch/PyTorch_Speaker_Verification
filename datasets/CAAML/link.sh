@@ -10,8 +10,6 @@ INSTRUCTORS=(
     784
     925
 )
-
-mkdir ./CAAML
 for INST in "${INSTRUCTORS[@]}"; do
-    ln -s $BASE_PATH/$INST ./CAAML/$INST
+    ln -s $BASE_PATH/$INST $INST
 done
