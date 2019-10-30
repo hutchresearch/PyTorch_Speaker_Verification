@@ -1,4 +1,4 @@
-training: !!bool "true"
+training: !!bool "false"
 device: "cuda"
 unprocessed_data: './TIMIT/*/*/*/*.wav'
 ---

@@ -13,6 +13,8 @@ import numpy as np
 import sys
 import librosa
 import wave
+import soundfile as sf
+from os import remove
 
 import webrtcvad
 
@@ -23,7 +25,11 @@ def read_wave(path, sr):
     Takes the path, and returns (PCM audio data, sample rate).
     Assumes sample width == 2
     """
-    with contextlib.closing(wave.open(path, 'rb')) as wf:
+
+    # Added to correct error in wav file format on HutchResearch drive
+    x, _ = librosa.load(path, sr=16000)
+    sf.write('tmp.wav', x, 16000)
+    with contextlib.closing(wave.open('tmp.wav', 'rb')) as wf:
         num_channels = wf.getnchannels()
         assert num_channels == 1
         sample_width = wf.getsampwidth()
@@ -31,9 +37,13 @@ def read_wave(path, sr):
         sample_rate = wf.getframerate()
         assert sample_rate in (8000, 16000, 32000, 48000)
         pcm_data = wf.readframes(wf.getnframes())
+
     data, _ = librosa.load(path, sr)
     assert len(data.shape) == 1
     assert sr in (8000, 16000, 32000, 48000)
+
+    # Remove the temporary file
+    remove('tmp.wav')
     return data, pcm_data
     
 class Frame(object):
