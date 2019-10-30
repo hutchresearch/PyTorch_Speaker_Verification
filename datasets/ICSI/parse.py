@@ -44,4 +44,4 @@ for mpath in tqdm.tqdm(paths, desc='Meetings'):
         spath = os.path.join(spath, f'{mid}_{start}_{end}.wav')
 
         # Use ffmpeg to extract and write segment audio
-        subprocess.call([FFMPEG', '-n', '-i', apath, '-ss', start, '-to', end, '-c', 'copy', spath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.call([FFMPEG, '-n', '-i', apath, '-ss', start, '-to', end, '-c', 'copy', spath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
