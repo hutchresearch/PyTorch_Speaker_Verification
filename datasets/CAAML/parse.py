@@ -10,6 +10,7 @@ STOP  = 1
 LABEL = 2
 INST_LABELS = ['l', 'iq', 'ia', 'a']
 STU_LABELS  = ['sq', 'sa', 'sp']
+FFMPEG = '../../ffmpeg-static/ffmpeg'
 
 # audio/instructor/class/date/annotation
 paths = glob.glob('audio/*/*/*/*.txt')
@@ -36,6 +37,6 @@ for mpath in tqdm.tqdm(paths, desc='Meetings'):
             stop_time = row[START].split('.')[0]
             spath = os.path.join(spath, '_'.join([mid, start_time, stop_time]) + '.wav')
             subprocess.call(
-                ['../ffmpeg-static/ffmpeg', '-n', '-i', apath, '-ss', row[START], '-to', row[STOP], '-c', 'copy', spath],
+                [FFMPEG, '-n', '-i', apath, '-ss', row[START], '-to', row[STOP], '-c', 'copy', spath],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
