@@ -2,15 +2,15 @@
 __pycache__
 .vscode
 
-# Datasets
-datasets/CAAML/audio
-datasets/CAAML/segments
-datasets/ICSI/audio
-datasets/ICSI/segments
-datasets/ICSI/transcripts
-datasets/TIMIT/train
-datasets/TIMIT/dev
-datasets/TIMIT/test
+# data
+data/CAAML/audio
+data/CAAML/segments
+data/ICSI/audio
+data/ICSI/segments
+data/ICSI/transcripts
+data/TIMIT/train
+data/TIMIT/dev
+data/TIMIT/test
 train_tisv
 test_tisv
 
