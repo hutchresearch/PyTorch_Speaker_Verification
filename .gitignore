@@ -16,7 +16,7 @@ test_tisv
 
 # Models
 speech_id_checkpoint
-*.model
+models
 
 # Local executables
 ffmpeg-static

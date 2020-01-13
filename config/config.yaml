@@ -1,12 +1,12 @@
 training: !!bool "false"
 device: "cuda"
-unprocessed_data: './TIMIT/*/*/*/*.wav'
+unprocessed_data: './data/TIMIT/*/*/*/*.wav'
 ---
 data:
-    train_path: './train_tisv'
-    train_path_unprocessed: './TIMIT/TRAIN/*/*/*.wav'
-    test_path: './test_tisv'
-    test_path_unprocessed: './TIMIT/TEST/*/*/*.wav'
+    train_path: './data/TIMIT/train_tisv'
+    train_path_unprocessed: './data/TIMIT/TRAIN/*/*/*.wav'
+    test_path: './data/TIMIT/test_tisv'
+    test_path_unprocessed: './data/TIMIT/TEST/*/*/*.wav'
     data_preprocessed: !!bool "true" 
     sr: 16000
     nfft: 512 #For mel spectrogram preprocess
@@ -14,12 +14,13 @@ data:
     hop: 0.01 #(s)
     nmels: 40 #Number of mel energies
     tisv_frame: 180 #Max number of time steps in input after preprocess
+    aggressiveness: 2 #Aggressiveness for vad segments
 ---   
 model:
     hidden: 768 #Number of LSTM hidden layer units
     num_layer: 3 #Number of LSTM layers
     proj: 256 #Embedding size
-    model_path: './model.model' #Model path for testing, inference, or resuming training
+    model_path: './speech_id_checkpoint/final.model' #Model path for testing, inference, or resuming training
 ---
 train:
     N : 4 #Number of speakers in batch

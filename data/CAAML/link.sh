@@ -1,4 +1,4 @@
-BASE_PATH=/home/hutch_research/data/2019_ml_teaching
+BASE_PATH=/research/hutchinson/data/2019_ml_teaching
 INSTRUCTORS=(
     100
     198
