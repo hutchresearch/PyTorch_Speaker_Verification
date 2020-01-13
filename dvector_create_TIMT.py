@@ -98,7 +98,7 @@ for i, folder in enumerate(tqdm.tqdm(audio_path, desc="meeting", position=0)):
     for file in tqdm.tqdm(os.listdir(folder), desc="Segment", position=1):
         if file.split('.')[-1] == 'wav':
             # 0 is least agressive about filtering out non-speech, 3 is the most
-            times, segs = VAD_chunk(2, os.path.join(folder, file))
+            times, segs = VAD_chunk(hp.data.aggressiveness, os.path.join(folder, file))
             if segs == []:
                 ns += 1
                 continue
