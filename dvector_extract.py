@@ -48,22 +48,23 @@ class Dataset(ABC):
         return self._save_path
 
     @abstractmethod
-    def get_annotations(self, apath):
+    def get_session(self, path):
         pass
 
     @abstractmethod
-    def get_id(self, label):
+    def get_annotations(self, path):
         pass
 
     @abstractmethod
-    def save(self, sequences, ids):
+    def save(self, all_seqs, all_cids, all_times, sessions):
         pass
 
 class ICSIDataset(Dataset):
     def __init__(self, data_path, save_path):
         super().__init__(data_path, save_path)
-        self._spkr_nxt = 1
-        self._spkr_log = {}
+
+    def get_session(self, path):
+        return path.split('/')[-2]
 
     @timeit(msg='Getting annotations')
     def get_annotations(self, path):
@@ -82,55 +83,44 @@ class ICSIDataset(Dataset):
 
         return annotations
 
-    def get_id(self, label):
-        if label not in self._spkr_log:
-            self._spkr_log[label] = self._spkr_nxt
-            self._spkr_nxt += 1
-
-        label = self._spkr_log[label]
-        return str(label)
-
-    def save(self, all_seqs, all_cids):
-        # Get a shuffled set of indicies for each split
+    def save(self, all_seqs, all_cids, all_times, sessions):
+        # Get a shuffled set of indices for each split
         shuffle = np.arange(len(all_cids))
         np.random.shuffle(shuffle)
         shuffle = np.array_split(shuffle, 10)
         splits = [('trn', 9), ('tst', 1)]
-
+  
+        entries = [('seqs', all_seqs), ('cids', all_cids), ('times', all_times), 
+                    ('sessions', sessionss)]
         cur = 0
-        ret = []
         for split, nsegs in splits:
-            # Gather indicies for this split
+            # Gather indices for this split and save
             idxs = np.concatenate(shuffle[cur:cur+nsegs])
-            seqs = [all_seqs[i] for i in idxs]
-            cids = [all_cids[i] for i in idxs]
+            d = {n: [l[i] for i in idxs] for n, l in entries}
 
-            # Save this split
-            seqs_path = os.path.join(self.save_path, 'icsi_{}_seqs.pkl'.format(split))
-            cids_path = os.path.join(self.save_path, 'icsi_{}_cids.pkl'.format(split))
-            with open(seqs_path, 'wb') as f:
-                pickle.dump(seqs, f)
-            with open(cids_path, 'wb') as f:
-                pickle.dump(cids, f)
+            path = os.path.join(self.save_path, 'icsi_{}.pkl'.format(split))
+            with open(path, 'wb') as f:
+                pickle.dump(d, f)
 
             cur += nsegs
             
 class CAAMLDataset(Dataset):
     def __init__(self, data_path, save_path, split, *, 
-                inst_base=1, inst_labels=['l', 'iq', 'ia', 'a'],
-                stu_base=101, stu_labels=['sq', 'sa', 'sp']):
+        inst_labels=['l', 'iq', 'ia', 'a'], 
+        stu_labels=['sq', 'sa', 'sp']):
         
         super().__init__(data_path, save_path)
         with open(split) as split_csv:
             csv_reader = csv.reader(split_csv, delimiter=',')
             split_dict = {x[0]: x[1] for x in csv_reader}
         
-        self._inst_nxt    = inst_base
         self._inst_labels = inst_labels
-        self._stu_nxt     = stu_base
         self._stu_labels  = stu_labels
-        self._inst_log    = {}
+        self._stu_id      = 0
         self._split       = split_dict
+
+    def get_session(self, path):
+        return os.path.basename(path).split('.')[0]
 
     @timeit(msg='Getting annotations')
     def get_annotations(self, path):
@@ -145,48 +135,36 @@ class CAAMLDataset(Dataset):
             dtype={'start': np.float32, 'stop': np.float32, 'label': str}
         )
 
+        inst_id = 'I' + path.split('/')[-4]
+        for i, r in annotations.iterrows():
+            if r['label'] in self._inst_labels:
+                label = inst_id
+            elif r['label'] in self._stu_labels:
+                label = 'S' + str(self._stu_id).zfill(4)
+                self._stu_id += 1
+            else:
+                label = 'None'
+            annotations.loc[i, 'label'] = label
+
         return annotations
 
-    def get_id(self, label):
-        if label in self._inst_labels:
-            label = self._inst_cur
-        elif label in self._stu_labels:
-            label = self._stu_nxt
-            self._stu_nxt += 1
-        else:
-            label = 0
-
-        return str(label)
-
-    def save(self, all_seqs, all_cids, sessions):
+    def save(self, all_seqs, all_cids, all_times, sessions):
         # Build dataset split
         splits = {}
-        for seq, cid, session in zip(all_seqs, all_cids, sessions):
+        for seq, cid, time, session in zip(all_seqs, all_cids, all_times, sessions):
             split = self._split[session]
             if split not in splits:
-                splits[split] = {'seqs': [], 'cids': []}
+                splits[split] = {'seqs': [], 'cids': [], 'times': [], 'sessions': []}
             splits[split]['seqs'].append(seq)
             splits[split]['cids'].append(cid)
+            splits[split]['times'].append(time)
+            splits[split]['sessions'].append(session)
 
-        # Write dvectors to disk
+        # Write splits to disk
         for split in splits.keys():
-            # Save this split
-            seqs_path = os.path.join(self.save_path, 'caaml_{}_seqs.pkl'.format(split))
-            cids_path = os.path.join(self.save_path, 'caaml_{}_cids.pkl'.format(split))
-            with open(seqs_path, 'wb') as f:
-                pickle.dump(splits[split]['seqs'], f)
-            with open(cids_path, 'wb') as f:
-                pickle.dump(splits[split]['cids'], f)
-            
-    def log(self, instructor):
-        new_inst = False
-        if instructor not in self._inst_log:
-            new_inst = True
-            self._inst_log[instructor] = self._inst_nxt
-            self._inst_nxt += 1
-
-        self._inst_cur = self._inst_log[instructor]
-        return new_inst    
+            path = os.path.join(self.save_path, 'caaml_{}.pkl'.format(split))
+            with open(path, 'wb') as f:
+                pickle.dump(splits[split], f) 
 
 def main():
     args = get_args()
@@ -207,14 +185,21 @@ def main():
 
     all_seqs = []
     all_cids = []
+    all_times = []
     sessions = []
     for path in dataset.data_path:
         print('\n============== Processing {} ============== '.format(path))
 
+        # Get session name
+        session = dataset.get_session(path)
+        if session is None:
+            print('ERR: Session not found in any split, skipping...')
+            continue
+ 
         # Get annotations
         annotations = dataset.get_annotations(path)
         if annotations is None:
-            print('No suitable annotations found, skipping file...')
+            print('ERR: No suitable annotations found, skipping...')
             continue
 
         # Segment the audio with VAD
@@ -236,11 +221,6 @@ def main():
 
         # Align speaker embeddings into a standard sequence of embeddings
         sequence, times = align_embeddings(embeddings.cpu().detach().numpy(), times)
-
-        # Special logging for CAAML
-        if isinstance(dataset, CAAMLDataset):
-            inst = os.path.basename(path).split('_')[0]
-            dataset.log(inst)
         
         # Get cluster ids for each frame
         cluster_ids = get_cluster_ids(times, dataset, annotations)
@@ -248,12 +228,11 @@ def main():
         # Add the sequence and cluster ids to the list of all sessions
         all_seqs.append(sequence) 
         all_cids.append(cluster_ids)
-        sessions.append(os.path.basename(path).split('.')[0])
+        all_times.append(times)
+        sessions.append(session)
 
-    # Save split dataset dvectors
-    if isinstance(dataset, CAAMLDataset):
-        dataset.save(all_seqs, all_cids, sessions)
-    dataset.save(all_seqs, all_cids)
+    # Save split dataset 
+    dataset.save(all_seqs, all_cids, all_times, sessions)
 
 def get_args():
     parser = argparse.ArgumentParser(description='Extract dvectors from some dataset.')
@@ -370,20 +349,16 @@ def align_embeddings(embeddings, times):
 @timeit(msg='Getting cluster IDs')
 def get_cluster_ids(times, dataset, annotations):
     cluster_ids = []
-    pid = 0
     for time in times:
         # Get all annotations intersecting with frame
         label_df = annotations[~( (annotations['start'] >= time[1]) | (annotations['stop'] <= time[0]) )].copy()
         if len(label_df) == 0:
-            cluster_ids.append(pid)
+            cluster_ids.append('None')
             continue
         
         # Get id of maximum overlap label
         label_df['overlap'] = label_df['stop'].clip(upper=time[1]) - label_df['start'].clip(lower=time[0])
-        cid = dataset.get_id(label_df.loc[label_df['overlap'].idxmax()]['label'])
-        
-        cluster_ids.append(cid)
-        pid = cid
+        cluster_ids.append(label_df.loc[label_df['overlap'].idxmax()['label']])
     return np.asarray(cluster_ids)
 
 if __name__ == '__main__':

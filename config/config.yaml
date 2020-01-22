@@ -14,7 +14,7 @@ data:
     hop: 0.01 #(s)
     nmels: 40 #Number of mel energies
     tisv_frame: 180 #Max number of time steps in input after preprocess
-    aggressiveness: 2 #Aggressiveness for vad segments
+    aggressiveness: 0 #Aggressiveness for vad segments
 ---   
 model:
     hidden: 768 #Number of LSTM hidden layer units
